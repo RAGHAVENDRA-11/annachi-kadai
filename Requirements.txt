@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pymysql
+cryptography
+python-dotenv
+pydantic
+geopy
+scikit-learn
+pandas
+numpy
