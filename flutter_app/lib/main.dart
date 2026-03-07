@@ -70,6 +70,16 @@ class CartProvider extends ChangeNotifier {
     return _items[index]['quantity'] as int;
   }
 
+  void deleteItem(int productId) {
+    _items.removeWhere((i) => i['id'] == productId);
+    notifyListeners();
+  }
+
+  void clear() {
+    _items.clear();
+    notifyListeners();
+  }
+
   void clearCart() {
     _items.clear();
     notifyListeners();
