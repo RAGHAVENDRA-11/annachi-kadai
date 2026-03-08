@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'main.dart';
 import 'api_service.dart';
+import 'checkout_screen.dart';
+import 'checkout_screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -165,16 +167,14 @@ class _CartScreenState extends State<CartScreen> {
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    onPressed: _placing ? null : () => _placeOrder(context),
-                    child: _placing
-                        ? const SizedBox(width: 22, height: 22,
-                            child: CircularProgressIndicator(color: Color(0xFF1A1F36), strokeWidth: 2.5))
-                        : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            const Icon(Icons.check_circle_rounded, size: 20),
-                            const SizedBox(width: 10),
-                            Text('Place Order · ₹${cart.totalPrice.toStringAsFixed(0)}',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                          ]),
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const CheckoutScreen())),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const Icon(Icons.arrow_forward_rounded, size: 20),
+                        const SizedBox(width: 10),
+                        Text('Checkout · ₹${cart.totalPrice.toStringAsFixed(0)}',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                      ]),
                   ),
                 ),
               ),

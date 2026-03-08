@@ -111,4 +111,38 @@ class ApiService {
     return data;
   }
 
+
+  static Future<Map> validateAddress(String address) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/orders/validate-address'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'address': address}),
+    );
+    final data = jsonDecode(res.body);
+    if (res.statusCode != 200) throw Exception(data['detail'] ?? 'Validation failed');
+    return data;
+  }
+
+  static Future<Map> validateCoordinates(double lat, double lng) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/orders/validate-coordinates'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'lat': lat, 'lng': lng}),
+    );
+    final data = jsonDecode(res.body);
+    if (res.statusCode != 200) throw Exception(data['detail'] ?? 'Validation failed');
+    return data;
+  }
+
+  static Future<Map> placeOrderWithBill(Map orderData) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/orders/place-with-bill'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(orderData),
+    );
+    final data = jsonDecode(res.body);
+    if (res.statusCode != 200) throw Exception(data['detail'] ?? 'Order failed');
+    return data;
+  }
+
 }
