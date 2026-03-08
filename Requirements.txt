@@ -9,3 +9,5 @@ geopy
 scikit-learn
 pandas
 numpy
+reportlab
+requests
