@@ -2,10 +2,16 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Copy everything first
+# Install system dependencies needed by reportlab
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy everything
 COPY . .
 
-# Install dependencies
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create bills directory
