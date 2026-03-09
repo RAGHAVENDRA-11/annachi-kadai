@@ -7,3 +7,7 @@ python-dotenv
 pydantic
 reportlab
 requests
+pandas
+numpy
+scikit-learn
+geopy
