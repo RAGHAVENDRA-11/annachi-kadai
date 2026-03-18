@@ -56,3 +56,40 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
                {"id": product_id})
     db.commit()
     return {"message": "Product deleted"}
+
+# Add these endpoints to your existing backend/routes/products.py
+
+@router.put("/{product_id}/stock")
+def update_stock(product_id: int, data: dict, db: Session = Depends(get_db)):
+    new_stock = data.get("stock_quantity")
+    if new_stock is None or new_stock < 0:
+        raise HTTPException(status_code=400, detail="Invalid stock quantity")
+    db.execute(text(
+        "UPDATE products SET stock_quantity = :stock WHERE id = :pid"
+    ), {"stock": new_stock, "pid": product_id})
+    db.commit()
+    return {"message": "Stock updated", "product_id": product_id, "stock_quantity": new_stock}
+
+@router.delete("/{product_id}")
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    db.execute(text("DELETE FROM products WHERE id = :pid"), {"pid": product_id})
+    db.commit()
+    return {"message": "Product deleted", "product_id": product_id}
+
+@router.put("/{product_id}")
+def update_product(product_id: int, data: dict, db: Session = Depends(get_db)):
+    fields = []
+    params = {"pid": product_id}
+    if "name" in data:
+        fields.append("name = :name"); params["name"] = data["name"]
+    if "price" in data:
+        fields.append("price = :price"); params["price"] = data["price"]
+    if "stock_quantity" in data:
+        fields.append("stock_quantity = :stock"); params["stock"] = data["stock_quantity"]
+    if "unit" in data:
+        fields.append("unit = :unit"); params["unit"] = data["unit"]
+    if not fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    db.execute(text(f"UPDATE products SET {', '.join(fields)} WHERE id = :pid"), params)
+    db.commit()
+    return {"message": "Product updated"}

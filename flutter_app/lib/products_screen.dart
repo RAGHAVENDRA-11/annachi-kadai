@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'api_service.dart';
 import 'main.dart';
+import 'product_detail_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   final String selectedCategory;
@@ -18,16 +20,30 @@ class _ProductsScreenState extends State<ProductsScreen> {
   static const Color _greyLt  = Color(0xFFF9FAFB);
   static const Color _border  = Color(0xFFE5E7EB);
   static const Color _white   = Color(0xFFFFFFFF);
+  static const Color _red     = Color(0xFFEF4444);
 
   List _products = [];
   List _filtered = [];
   bool _loading = true;
   final _searchCtrl = TextEditingController();
+  Timer? _refreshTimer;
 
   final Map<String, int> _catIds = {'Grocery': 1, 'Ice Cream': 2, 'Stationery': 3};
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+    // Auto-refresh every 30 seconds to catch stock changes
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _load(silent: true));
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(ProductsScreen old) {
@@ -35,10 +51,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
     if (old.selectedCategory != widget.selectedCategory) _applyFilter(_searchCtrl.text);
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     final data = await ApiService.getProducts();
-    setState(() { _products = data; _loading = false; });
-    _applyFilter(_searchCtrl.text);
+    if (mounted) {
+      setState(() { _products = data; _loading = false; });
+      _applyFilter(_searchCtrl.text);
+    }
   }
 
   void _applyFilter(String q) {
@@ -160,94 +179,131 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ]))
                   : RefreshIndicator(color: _yellow, backgroundColor: _white, onRefresh: _load,
                       child: Padding(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                         child: GridView.builder(
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3, childAspectRatio: 0.66,
+                              crossAxisCount: 2, childAspectRatio: 0.78,
                               crossAxisSpacing: 10, mainAxisSpacing: 10),
                           itemCount: _filtered.length,
                           itemBuilder: (context, i) {
                             final p = _filtered[i];
-                            final isLow = (p['stock_quantity'] as int) < 10;
+                            final stockQty = (p['stock_quantity'] ?? 0) is int
+                                ? (p['stock_quantity'] ?? 0) as int
+                                : (p['stock_quantity'] ?? 0).toInt();
+                            final isLow = stockQty > 0 && stockQty < 10;
+                            final isOutOfStock = stockQty == 0;
                             final qty = context.watch<CartProvider>().getQuantity(p['id']);
 
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: _white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                    color: qty > 0 ? const Color(0xFFE6BE00) : _border,
-                                    width: qty > 0 ? 2 : 1),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04),
-                                    blurRadius: 8, offset: const Offset(0, 2))],
-                              ),
-                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                // Image
-                                Stack(children: [
-                                  Container(
-                                    height: 110, width: double.infinity,
-                                    decoration: BoxDecoration(
-                                        color: const Color(0xFFFFFBE6),
-                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(15))),
-                                    child: ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                                      child: Padding(padding: const EdgeInsets.all(10),
-                                          child: _buildImage(p['image'], 90)),
-                                    ),
-                                  ),
-                                  if (isLow)
-                                    Positioned(top: 6, left: 6,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(color: const Color(0xFFEF4444),
-                                            borderRadius: BorderRadius.circular(4)),
-                                        child: const Text('Low', style: TextStyle(color: Colors.white,
-                                            fontSize: 8, fontWeight: FontWeight.bold)),
-                                      ),
-                                    ),
-                                  if (qty > 0)
-                                    Positioned(top: 6, right: 6,
-                                      child: Container(
-                                        width: 20, height: 20,
-                                        decoration: BoxDecoration(color: _yellow, shape: BoxShape.circle),
-                                        child: Center(child: Text('$qty', style: TextStyle(
-                                            color: _navy, fontSize: 10, fontWeight: FontWeight.bold))),
-                                      ),
-                                    ),
-                                ]),
+                            void addToCart() {
+                              if (isOutOfStock) return;
+                              cart.addItem({
+                                'id': p['id'], 'name': p['name'],
+                                'price': double.parse(p['price'].toString()),
+                                'unit': p['unit'],
+                              });
+                              _toast(context, p['name']);
+                            }
 
-                                // Info
-                                Expanded(child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Text(p['name'], style: TextStyle(fontWeight: FontWeight.w700,
-                                            fontSize: 13, color: _navy),
-                                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                                        const SizedBox(height: 2),
-                                        Text('1 ${p['unit']}', style: TextStyle(color: _grey, fontSize: 11)),
-                                      ]),
-                                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                        Text('₹${p['price']}', style: TextStyle(fontSize: 15,
-                                            fontWeight: FontWeight.w800, color: _navy)),
-                                        qty == 0
+                            return GestureDetector(
+                              onTap: () async {
+                                await Navigator.push(context, MaterialPageRoute(
+                                  builder: (_) => ProductDetailScreen(product: Map<String, dynamic>.from(p)),
+                                ));
+                                // Refresh stock when returning from detail
+                                _load(silent: true);
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: isOutOfStock ? const Color(0xFFF3F4F6) : _white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                      color: qty > 0 ? const Color(0xFFE6BE00) : _border,
+                                      width: qty > 0 ? 2 : 1),
+                                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 6, offset: const Offset(0, 2))],
+                                ),
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  // Image
+                                  Stack(children: [
+                                    Container(
+                                      height: 110, width: double.infinity,
+                                      decoration: BoxDecoration(
+                                          color: isOutOfStock
+                                              ? const Color(0xFFF3F4F6)
+                                              : const Color(0xFFFFFBE6),
+                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
+                                      child: ClipRRect(
+                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+                                        child: Padding(padding: const EdgeInsets.all(10),
+                                            child: _buildImage(p['image'], 90)),
+                                      ),
+                                    ),
+                                    if (isLow)
+                                      Positioned(top: 6, left: 6,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(color: const Color(0xFFEF4444),
+                                              borderRadius: BorderRadius.circular(4)),
+                                          child: const Text('Low Stock', style: TextStyle(color: Colors.white,
+                                              fontSize: 8, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ),
+                                    if (isOutOfStock)
+                                      Positioned.fill(
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.6),
+                                              borderRadius: const BorderRadius.vertical(top: Radius.circular(13))),
+                                          child: Center(child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                                color: _red, borderRadius: BorderRadius.circular(6)),
+                                            child: const Text('Out of Stock', style: TextStyle(
+                                                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                                          )),
+                                        ),
+                                      ),
+                                    if (qty > 0)
+                                      Positioned(top: 6, right: 6,
+                                        child: Container(
+                                          width: 20, height: 20,
+                                          decoration: BoxDecoration(color: _yellow, shape: BoxShape.circle),
+                                          child: Center(child: Text('$qty', style: TextStyle(
+                                              color: _navy, fontSize: 10, fontWeight: FontWeight.bold))),
+                                        ),
+                                      ),
+                                  ]),
+
+                                  // Info + Button
+                                  Expanded(child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                          Text(p['name'], style: TextStyle(fontWeight: FontWeight.w700,
+                                              fontSize: 13, color: _navy),
+                                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                                          const SizedBox(height: 2),
+                                          Text('1 ${p['unit']}', style: TextStyle(color: _grey, fontSize: 11)),
+                                        ]),
+                                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                          Text('₹${p['price']}', style: TextStyle(fontSize: 15,
+                                              fontWeight: FontWeight.w800, color: _navy)),
+                                          if (!isOutOfStock)
+                                            qty == 0
                                             ? GestureDetector(
-                                                onTap: () {
-                                                  cart.addItem({'id': p['id'], 'name': p['name'],
-                                                    'price': double.parse(p['price'].toString()),
-                                                    'unit': p['unit']});
-                                                  _toast(context, p['name']);
-                                                },
+                                                onTap: addToCart,
                                                 child: Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                                                   decoration: BoxDecoration(
                                                     color: _yellow,
                                                     borderRadius: BorderRadius.circular(8),
                                                   ),
                                                   child: Text('ADD', style: TextStyle(color: _navy,
-                                                      fontWeight: FontWeight.bold, fontSize: 11)),
+                                                      fontWeight: FontWeight.bold, fontSize: 12)),
                                                 ),
                                               )
                                             : Container(
@@ -256,26 +312,27 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                                                   GestureDetector(
                                                     onTap: () => context.read<CartProvider>().removeItem(p['id']),
-                                                    child: Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-                                                        child: Icon(Icons.remove, color: _yellow, size: 13)),
+                                                    child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                                        child: Icon(Icons.remove, color: _yellow, size: 14)),
                                                   ),
                                                   Text('$qty', style: TextStyle(color: _yellow,
-                                                      fontWeight: FontWeight.bold, fontSize: 12)),
+                                                      fontWeight: FontWeight.bold, fontSize: 13)),
                                                   GestureDetector(
                                                     onTap: () => context.read<CartProvider>().addItem(
                                                         {'id': p['id'], 'name': p['name'],
                                                           'price': double.parse(p['price'].toString()),
                                                           'unit': p['unit']}),
-                                                    child: Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-                                                        child: Icon(Icons.add, color: _yellow, size: 13)),
+                                                    child: Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                                        child: Icon(Icons.add, color: _yellow, size: 14)),
                                                   ),
                                                 ]),
                                               ),
-                                      ]),
-                                    ],
-                                  ),
-                                )),
-                              ]),
+                                        ]),
+                                      ],
+                                    ),
+                                  )),
+                                ]),
+                              ),
                             );
                           },
                         ),

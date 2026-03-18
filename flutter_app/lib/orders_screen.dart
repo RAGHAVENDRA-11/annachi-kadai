@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import 'api_service.dart';
 
 class OrdersScreen extends StatefulWidget {
@@ -18,23 +19,35 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   List _orders = [];
   bool _loading = true;
+  Timer? _timer;
 
   @override
-  void initState() { super.initState(); _loadOrders(); }
+  void initState() {
+    super.initState();
+    _loadOrders();
+    // Auto-refresh every 15s to catch delivery status updates
+    _timer = Timer.periodic(const Duration(seconds: 15), (_) => _loadOrders(silent: true));
+  }
 
-  Future<void> _loadOrders() async {
-    setState(() => _loading = true);
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadOrders({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     try {
       final prefs = await SharedPreferences.getInstance();
-      final customerId = prefs.getInt('customer_id');
+      final customerId = int.tryParse((prefs.get('customer_id') ?? '').toString());
       if (customerId != null) {
         final data = await ApiService.getOrders(customerId);
-        setState(() => _orders = data);
+        if (mounted) setState(() => _orders = data);
       }
     } catch (e) {
       debugPrint('Orders error: $e');
     }
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   Color _statusColor(String status) {
@@ -42,7 +55,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
       case 'delivered':  return const Color(0xFF10B981);
       case 'cancelled':  return const Color(0xFFEF4444);
       case 'pending':    return const Color(0xFFF59E0B);
-      case 'processing': return const Color(0xFF3B82F6);
+      case 'confirmed':  return const Color(0xFF3B82F6);
+      case 'processing': return const Color(0xFF8B5CF6);
+      case 'on_the_way': return const Color(0xFF0EA5E9);
       default:           return _grey;
     }
   }
@@ -52,8 +67,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
       case 'delivered':  return Icons.check_circle_rounded;
       case 'cancelled':  return Icons.cancel_rounded;
       case 'pending':    return Icons.schedule_rounded;
-      case 'processing': return Icons.sync_rounded;
+      case 'confirmed':  return Icons.thumb_up_rounded;
+      case 'processing': return Icons.inventory_2_rounded;
+      case 'on_the_way': return Icons.delivery_dining_rounded;
       default:           return Icons.info_outline_rounded;
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'on_the_way': return 'On the Way 🛵';
+      case 'processing': return 'Processing 📦';
+      case 'confirmed':  return 'Confirmed ✓';
+      case 'pending':    return 'Pending';
+      case 'delivered':  return 'Delivered ✅';
+      case 'cancelled':  return 'Cancelled';
+      default:           return status;
     }
   }
 
@@ -145,7 +174,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(_statusIcon(status), color: statusColor, size: 12),
                 const SizedBox(width: 4),
-                Text(status[0].toUpperCase() + status.substring(1),
+                Text(_statusLabel(status),
                     style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
               ]),
             ),

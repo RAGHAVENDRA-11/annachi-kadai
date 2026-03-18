@@ -9,7 +9,6 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; min-height: 100vh; }
-
         .sidebar {
             width: 240px; min-height: 100vh;
             background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
@@ -49,7 +48,6 @@
         }
         .admin-info .name { color: white; font-size: 0.8rem; font-weight: 600; }
         .admin-info .role { color: rgba(255,255,255,0.4); font-size: 0.7rem; }
-
         .main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
         .topbar {
             background: white; padding: 14px 28px;
@@ -61,11 +59,9 @@
         .topbar-actions { display: flex; gap: 10px; align-items: center; }
         .badge-pill { background: #ff6b00; color: white; border-radius: 20px;
             padding: 3px 10px; font-size: 0.75rem; font-weight: 600; }
-
         .content { padding: 24px 28px; flex: 1; }
         .section { display: none; }
         .section.active { display: block; }
-
         .stat-card {
             border-radius: 14px; padding: 22px; color: white;
             border: none; position: relative; overflow: hidden;
@@ -82,14 +78,12 @@
         .c-green  { background: linear-gradient(135deg, #0f9b58, #34d399); }
         .c-blue   { background: linear-gradient(135deg, #1d4ed8, #60a5fa); }
         .c-red    { background: linear-gradient(135deg, #dc2626, #f87171); }
-
         .card { border: none; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .card-header-custom {
             padding: 18px 22px; border-bottom: 1px solid #f0f0f0;
             display: flex; justify-content: space-between; align-items: center;
         }
         .card-header-custom h6 { font-weight: 700; color: #1a1a2e; margin: 0; }
-
         .table { margin: 0; }
         .table thead th { background: #f8f9fb; color: #666; font-size: 0.75rem;
             font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
@@ -98,17 +92,16 @@
             border-bottom: 1px solid #f5f5f5; font-size: 0.875rem; }
         .table tbody tr:last-child td { border-bottom: none; }
         .table tbody tr:hover { background: #fafafa; }
-
         .prod-img-placeholder { width: 44px; height: 44px; border-radius: 10px;
             background: #fff3e0; display: flex; align-items: center; justify-content: center;
             color: #ff6b00; font-size: 1.3rem; }
-
         .status { padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; display:inline-block; }
         .s-pending   { background: #fff8e1; color: #f59e0b; }
         .s-confirmed { background: #e0f2fe; color: #0284c7; }
         .s-delivered { background: #dcfce7; color: #16a34a; }
         .s-cancelled { background: #fee2e2; color: #dc2626; }
-
+        .s-active    { background: #dcfce7; color: #16a34a; }
+        .s-outofstock{ background: #fee2e2; color: #dc2626; }
         .form-label { font-weight: 600; font-size: 0.825rem; color: #444; margin-bottom: 6px; }
         .form-control, .form-select {
             border: 1.5px solid #e8e8e8; border-radius: 10px;
@@ -124,7 +117,6 @@
             transition: opacity 0.2s; cursor: pointer;
         }
         .btn-orange:hover { opacity: 0.9; color: white; }
-
         .img-upload-zone {
             border: 2px dashed #e0e0e0; border-radius: 14px;
             padding: 30px; text-align: center; cursor: pointer;
@@ -135,7 +127,6 @@
         .img-upload-zone.has-image { border-style: solid; border-color: #ff6b00; padding: 8px; min-height: unset; }
         .img-upload-icon { font-size: 2.5rem; color: #ccc; margin-bottom: 8px; }
         .img-upload-text { color: #999; font-size: 0.85rem; }
-
         .search-box {
             display: flex; align-items: center; gap: 8px;
             background: #f5f5f5; border-radius: 10px; padding: 8px 14px;
@@ -143,21 +134,18 @@
         .search-box input { border: none; background: none; outline: none;
             font-size: 0.875rem; width: 200px; }
         .search-box i { color: #aaa; }
-
         .low-stock-card {
             background: #fffbf5; border-radius: 12px; padding: 14px 16px;
             display: flex; align-items: center; gap: 12px;
             border-left: 4px solid #f59e0b; margin-bottom: 8px;
         }
         .low-stock-card.critical { border-left-color: #dc2626; background: #fff5f5; }
-
         .customer-avatar {
             width: 36px; height: 36px; border-radius: 50%;
             background: linear-gradient(135deg, #ff6b00, #ff9a3c);
             display: flex; align-items: center; justify-content: center;
             color: white; font-weight: 700; font-size: 0.8rem;
         }
-
         .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; }
         .toast-msg {
             background: #1a1a2e; color: white; padding: 14px 20px;
@@ -167,8 +155,45 @@
         }
         .toast-msg.success { border-left: 4px solid #16a34a; }
         .toast-msg.error   { border-left: 4px solid #dc2626; }
+        .toast-msg.info    { border-left: 4px solid #0284c7; }
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; }
                               to   { transform: translateX(0); opacity: 1; } }
+        .stock-input-group { display: flex; align-items: center; gap: 4px; }
+        .stock-input-group input { width: 70px; text-align: center; }
+        .stock-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; font-weight: 600; }
+        .stock-ok   { background: #dcfce7; color: #16a34a; }
+        .stock-low  { background: #fff8e1; color: #f59e0b; }
+        .stock-zero { background: #fee2e2; color: #dc2626; }
+        /* flash animation when stock changes */
+        @keyframes stockFlash {
+            0%   { background: #fff9c4; }
+            100% { background: transparent; }
+        }
+        .stock-changed { animation: stockFlash 1.5s ease; }
+        /* auto-refresh indicator */
+        .refresh-indicator {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.75rem; color: #999;
+        }
+        .refresh-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #16a34a;
+        }
+        .refresh-dot.syncing { background: #f59e0b; animation: pulse 0.8s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+        .modal-backdrop-custom {
+            display:none; position:fixed; top:0;left:0;right:0;bottom:0;
+            background:rgba(0,0,0,0.5); z-index:9000; align-items:center; justify-content:center;
+        }
+        .modal-backdrop-custom.show { display:flex; }
+        .modal-box {
+            background:white; border-radius:16px; padding:28px; width:480px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .modal-box h6 { font-weight:700; color:#1a1a2e; margin-bottom:20px; font-size:1rem; }
+        .revenue-card {
+            background: linear-gradient(135deg, #1a1a2e, #2d3561);
+            border-radius: 14px; padding: 20px; color: white;
+        }
     </style>
 </head>
 <body>
@@ -194,7 +219,7 @@
             <i class="bi bi-bag-check"></i> Orders
         </div>
         <div class="nav-label">Management</div>
-        <div class="nav-item" id="nav-addproduct" onclick="showSection('addproduct', this)">
+        <div class="nav-item" id="nav-addproduct" onclick="showSection('addproduct', document.getElementById('nav-addproduct'))">
             <i class="bi bi-plus-circle"></i> Add Product
         </div>
         <div class="nav-item" id="nav-customers" onclick="showSection('customers', this)">
@@ -218,9 +243,17 @@
             <small id="pageSubtitle">Overview of your store</small>
         </div>
         <div class="topbar-actions">
+            <!-- Auto-refresh indicator -->
+            <div class="refresh-indicator">
+                <div class="refresh-dot" id="refreshDot"></div>
+                <span id="lastRefresh">Live</span>
+            </div>
+            <button onclick="manualRefresh()" class="btn btn-sm btn-outline-secondary" title="Refresh now">
+                <i class="bi bi-arrow-clockwise" id="refreshIcon"></i>
+            </button>
             <div class="search-box">
                 <i class="bi bi-search"></i>
-                <input type="text" placeholder="Quick search...">
+                <input type="text" id="globalSearch" placeholder="Quick search..." oninput="quickSearch(this.value)">
             </div>
             <span class="badge-pill" id="topTime"></span>
         </div>
@@ -260,10 +293,38 @@
                     </div>
                 </div>
             </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="revenue-card">
+                        <div style="font-size:.8rem;opacity:.7;margin-bottom:4px">💰 Today's Revenue</div>
+                        <div style="font-size:2rem;font-weight:800" id="todayRevenue">₹0</div>
+                        <div style="font-size:.75rem;opacity:.6;margin-top:4px" id="todayOrderCount">0 orders today</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="revenue-card" style="background:linear-gradient(135deg,#0f9b58,#1a6b3c)">
+                        <div style="font-size:.8rem;opacity:.7;margin-bottom:4px">📦 Total Revenue</div>
+                        <div style="font-size:2rem;font-weight:800" id="totalRevenue">₹0</div>
+                        <div style="font-size:.75rem;opacity:.6;margin-top:4px" id="deliveredCount">0 delivered</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="revenue-card" style="background:linear-gradient(135deg,#1d4ed8,#2563eb)">
+                        <div style="font-size:.8rem;opacity:.7;margin-bottom:4px">🔄 Auto-Refresh</div>
+                        <div style="font-size:1.1rem;font-weight:700;margin-top:4px">Every 15 seconds</div>
+                        <div style="font-size:.75rem;opacity:.6;margin-top:4px">Stock updates live after orders</div>
+                    </div>
+                </div>
+            </div>
             <div class="row g-3">
                 <div class="col-md-8">
                     <div class="card">
-                        <div class="card-header-custom"><h6>⚠️ Low Stock Alerts</h6></div>
+                        <div class="card-header-custom">
+                            <h6>⚠️ Low Stock Alerts</h6>
+                            <button onclick="loadDashboard()" class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                        </div>
                         <div class="p-3" id="lowStockList"></div>
                     </div>
                 </div>
@@ -280,10 +341,23 @@
         <div id="products" class="section">
             <div class="card">
                 <div class="card-header-custom">
-                    <h6>📦 All Products</h6>
-                    <button class="btn-orange" onclick="showSection('addproduct', document.getElementById('nav-addproduct'))">
-                        <i class="bi bi-plus"></i> Add Product
-                    </button>
+                    <h6>📦 All Products <small style="font-weight:400;color:#999;font-size:.75rem" id="stockLastUpdated"></small></h6>
+                    <div class="d-flex gap-2 align-items-center">
+                        <div class="refresh-indicator">
+                            <div class="refresh-dot" id="productRefreshDot"></div>
+                            <span style="font-size:.72rem;color:#999">Auto-sync</span>
+                        </div>
+                        <input type="text" class="form-control form-control-sm" id="productSearch"
+                            placeholder="Search products..." oninput="filterProducts(this.value)"
+                            style="width:200px;border-radius:8px;">
+                        <button onclick="loadProducts(true)" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <button class="btn-orange" style="padding:8px 16px;font-size:.8rem"
+                            onclick="showSection('addproduct', document.getElementById('nav-addproduct'))">
+                            <i class="bi bi-plus"></i> Add
+                        </button>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table">
@@ -301,12 +375,17 @@
             <div class="card">
                 <div class="card-header-custom">
                     <h6>🛍️ All Orders</h6>
-                    <span class="badge-pill" id="orderCount">0 orders</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="badge-pill" id="orderCount">0 orders</span>
+                        <button onclick="loadOrders()" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
-                            <tr><th>Order ID</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th><th>Update</th></tr>
+                            <tr><th>Order ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Update</th></tr>
                         </thead>
                         <tbody id="ordersTable"></tbody>
                     </table>
@@ -332,8 +411,7 @@
                         </div>
                         <input type="file" id="imgInput" accept="image/*" style="display:none"
                                onchange="handleImageUpload(event)">
-                        <button class="btn btn-outline-secondary btn-sm mt-2 w-100"
-                                onclick="clearImage()">
+                        <button class="btn btn-outline-secondary btn-sm mt-2 w-100" onclick="clearImage()">
                             <i class="bi bi-x"></i> Remove Image
                         </button>
                     </div>
@@ -394,7 +472,7 @@
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
-                            <tr><th>Avatar</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Joined</th></tr>
+                            <tr><th>Avatar</th><th>Name</th><th>Email</th><th>Phone</th><th>Membership</th><th>Address</th><th>Joined</th></tr>
                         </thead>
                         <tbody id="customersTable"></tbody>
                     </table>
@@ -402,70 +480,122 @@
             </div>
         </div>
 
-    </div><!-- /content -->
-</div><!-- /main -->
+    </div>
+</div>
+
+<!-- EDIT PRODUCT MODAL -->
+<div class="modal-backdrop-custom" id="editModal">
+    <div class="modal-box">
+        <h6>✏️ Edit Product</h6>
+        <input type="hidden" id="editId">
+        <div class="mb-3">
+            <label class="form-label">Product Name</label>
+            <input type="text" id="editName" class="form-control">
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-6">
+                <label class="form-label">Price (₹)</label>
+                <input type="number" id="editPrice" class="form-control">
+            </div>
+            <div class="col-6">
+                <label class="form-label">Stock Quantity</label>
+                <input type="number" id="editStock" class="form-control">
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="form-label">Unit</label>
+            <select id="editUnit" class="form-select">
+                <option value="kg">kg</option>
+                <option value="litre">litre</option>
+                <option value="piece">piece</option>
+                <option value="packet">packet</option>
+                <option value="dozen">dozen</option>
+                <option value="gram">gram</option>
+            </select>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="saveEdit()" class="btn-orange flex-fill py-2">
+                <i class="bi bi-check-lg me-1"></i> Save Changes
+            </button>
+            <button onclick="closeEdit()" class="btn btn-outline-secondary flex-fill py-2">Cancel</button>
+        </div>
+    </div>
+</div>
 
 <div class="toast-container" id="toastContainer"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-// ── API HELPERS ──
 var BASE = 'http://127.0.0.1:8000/api';
+var allProducts = [];
+var prevStockMap = {};   // track previous stock values for flash
+var currentSection = 'dashboard';
+var autoRefreshInterval = null;
 
-async function getProducts() {
-    const res = await fetch(BASE + '/products/');
-    return await res.json();
-}
-async function addProduct(data) {
-    const res = await fetch(BASE + '/products/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    return await res.json();
-}
-async function updateStock(productId, qty) {
-    const res = await fetch(BASE + '/products/' + productId + '/stock', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stock_quantity: qty })
-    });
-    return await res.json();
-}
-async function getOrders() {
-    const res = await fetch(BASE + '/orders/');
-    return await res.json();
-}
-async function updateOrderStatus(orderId, status) {
-    const res = await fetch(BASE + '/orders/' + orderId + '/status', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: status })
-    });
+// ── API ──
+async function api(url, method, body) {
+    var opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    var res = await fetch(BASE + url, opts);
     return await res.json();
 }
 
 // ── TIME ──
 function updateTime() {
-    var now = new Date();
     document.getElementById('topTime').textContent =
-        now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+        new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
 }
-updateTime();
-setInterval(updateTime, 1000);
+updateTime(); setInterval(updateTime, 1000);
 
 // ── TOAST ──
 window.toast = function(msg, type) {
     type = type || 'success';
     var el = document.createElement('div');
     el.className = 'toast-msg ' + type;
-    el.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill') + '"></i> ' + msg;
+    el.innerHTML = '<i class="bi bi-' + (type==='success' ? 'check-circle-fill' : type==='info' ? 'info-circle-fill' : 'exclamation-circle-fill') + '"></i> ' + msg;
     document.getElementById('toastContainer').appendChild(el);
-    setTimeout(function() { el.remove(); }, 3500);
+    setTimeout(function(){ el.remove(); }, 3500);
 };
 
-// ── SECTION NAV ──
+// ── AUTO REFRESH ──
+function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(function() {
+        silentRefresh();
+    }, 15000); // every 15 seconds
+}
+
+async function silentRefresh() {
+    var dot = document.getElementById('refreshDot');
+    var pDot = document.getElementById('productRefreshDot');
+    if (dot) dot.classList.add('syncing');
+    if (pDot) pDot.classList.add('syncing');
+
+    try {
+        if (currentSection === 'products') {
+            await loadProducts(false, true); // silent = no toast
+        } else if (currentSection === 'dashboard') {
+            await loadDashboard(true);
+        } else if (currentSection === 'orders') {
+            await loadOrders(true);
+        }
+        var now = new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        var el = document.getElementById('lastRefresh');
+        if (el) el.textContent = 'Synced ' + now;
+    } catch(e) {}
+
+    if (dot) dot.classList.remove('syncing');
+    if (pDot) pDot.classList.remove('syncing');
+}
+
+function manualRefresh() {
+    var icon = document.getElementById('refreshIcon');
+    if (icon) { icon.style.animation = 'spin 0.5s linear'; setTimeout(function(){ icon.style.animation=''; }, 600); }
+    silentRefresh();
+    toast('Refreshed!', 'info');
+}
+
+// ── NAV ──
 var titles = {
     dashboard:  ['Dashboard', 'Overview of your store'],
     products:   ['Products', 'Manage your inventory'],
@@ -473,26 +603,24 @@ var titles = {
     addproduct: ['Add Product', 'Add a new product to the store'],
     customers:  ['Customers', 'Registered customer list'],
 };
-
 window.showSection = function(name, el) {
-    document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
-    document.querySelectorAll('.nav-item').forEach(function(a) { a.classList.remove('active'); });
+    document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+    document.querySelectorAll('.nav-item').forEach(function(a){ a.classList.remove('active'); });
     document.getElementById(name).classList.add('active');
     if (el) el.classList.add('active');
     document.getElementById('pageTitle').textContent = titles[name][0];
     document.getElementById('pageSubtitle').textContent = titles[name][1];
-    if (name === 'products')  loadProducts();
-    if (name === 'orders')    loadOrders();
-    if (name === 'dashboard') loadDashboard();
-    if (name === 'customers') loadCustomers();
+    currentSection = name;
+    if (name==='products')  loadProducts(true);
+    if (name==='orders')    loadOrders();
+    if (name==='dashboard') loadDashboard();
+    if (name==='customers') loadCustomers();
 };
 
 // ── IMAGE ──
 var imgBase64 = null;
-
 window.handleImageUpload = function(e) {
-    var file = e.target.files[0];
-    if (!file) return;
+    var file = e.target.files[0]; if (!file) return;
     var reader = new FileReader();
     reader.onload = function(ev) {
         imgBase64 = ev.target.result;
@@ -503,7 +631,6 @@ window.handleImageUpload = function(e) {
     };
     reader.readAsDataURL(file);
 };
-
 window.clearImage = function() {
     imgBase64 = null;
     document.getElementById('imgPreview').style.display = 'none';
@@ -512,38 +639,63 @@ window.clearImage = function() {
     document.getElementById('imgInput').value = '';
 };
 
+// ── STOCK BADGE ──
+function stockBadge(qty) {
+    if (qty === 0) return '<span class="stock-badge stock-zero">Out of Stock</span>';
+    if (qty < 10)  return '<span class="stock-badge stock-low">Low: ' + qty + '</span>';
+    return '<span class="stock-badge stock-ok">' + qty + '</span>';
+}
+
 // ── DASHBOARD ──
-async function loadDashboard() {
+async function loadDashboard(silent) {
     try {
-        var products = await getProducts();
-        var orders = await getOrders();
+        var products = await api('/products/');
+        var orders   = await api('/orders/all');
         document.getElementById('totalProducts').textContent = products.length;
-        document.getElementById('totalOrders').textContent = orders.length;
-        document.getElementById('pendingOrders').textContent = orders.filter(function(o){ return o.status === 'pending'; }).length;
+        document.getElementById('totalOrders').textContent   = orders.length;
+        document.getElementById('pendingOrders').textContent = orders.filter(function(o){ return o.status==='pending'; }).length;
         var low = products.filter(function(p){ return p.stock_quantity < 10; });
         document.getElementById('lowStockCount').textContent = low.length;
 
+        // Revenue stats
+        var today = new Date().toDateString();
+        var todayOrders = orders.filter(function(o){
+            return new Date(o.created_at).toDateString() === today;
+        });
+        var todayRev = todayOrders.reduce(function(s,o){ return s + parseFloat(o.total_amount||0); }, 0);
+        var totalRev = orders.filter(function(o){ return o.status==='delivered'; })
+            .reduce(function(s,o){ return s + parseFloat(o.total_amount||0); }, 0);
+        var deliveredCount = orders.filter(function(o){ return o.status==='delivered'; }).length;
+        document.getElementById('todayRevenue').textContent  = '₹' + todayRev.toFixed(0);
+        document.getElementById('todayOrderCount').textContent = todayOrders.length + ' orders today';
+        document.getElementById('totalRevenue').textContent  = '₹' + totalRev.toFixed(0);
+        document.getElementById('deliveredCount').textContent = deliveredCount + ' delivered';
+
         document.getElementById('lowStockList').innerHTML = low.length === 0
             ? '<p class="text-muted text-center py-3">✅ All stocks are healthy</p>'
-            : low.map(function(p) { return `
+            : low.map(function(p){ return `
                 <div class="low-stock-card ${p.stock_quantity < 5 ? 'critical' : ''}">
                     ${p.image
                         ? `<img src="${p.image}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;">`
-                        : `<div style="width:36px;height:36px;border-radius:8px;background:#fff3e0;display:flex;align-items:center;justify-content:center;color:#ff6b00;font-size:1.2rem">🛍️</div>`}
+                        : `<div style="width:36px;height:36px;border-radius:8px;background:#fff3e0;display:flex;align-items:center;justify-content:center;color:#ff6b00">🛍️</div>`}
                     <div style="flex:1">
                         <div style="font-weight:600;font-size:.875rem">${p.name}</div>
                         <div style="font-size:.75rem;color:#f59e0b">${p.stock_quantity} ${p.unit} remaining</div>
                     </div>
-                    <span class="status ${p.stock_quantity < 5 ? 's-cancelled' : 's-pending'}">
-                        ${p.stock_quantity < 5 ? 'Critical' : 'Low'}
-                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                        ${stockBadge(p.stock_quantity)}
+                        <input type="number" value="${p.stock_quantity}" min="0" id="ds_${p.id}"
+                            style="width:65px" class="form-control form-control-sm">
+                        <button onclick="quickStockUpdate(${p.id},'ds_${p.id}')"
+                            class="btn btn-sm btn-warning fw-bold">✓</button>
+                    </div>
                 </div>`;
             }).join('');
 
         var recent = orders.slice(0, 5);
         document.getElementById('recentOrders').innerHTML = recent.length === 0
             ? '<p class="text-muted text-center py-3">No orders yet</p>'
-            : recent.map(function(o) { return `
+            : recent.map(function(o){ return `
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <div>
                         <div style="font-weight:600;font-size:.825rem">#${o.id} — ₹${o.total_amount}</div>
@@ -552,67 +704,172 @@ async function loadDashboard() {
                     <span class="status s-${o.status}">${o.status}</span>
                 </div>`;
             }).join('');
-    } catch(e) {
-        console.error('Dashboard error:', e);
-    }
+    } catch(e) { console.error('Dashboard error:', e); }
 }
 
 // ── PRODUCTS ──
-async function loadProducts() {
+async function loadProducts(showToast, silent) {
     try {
-        var products = await getProducts();
-        document.getElementById('productsTable').innerHTML = products.length === 0
-            ? '<tr><td colspan="7" class="text-center text-muted py-4">No products yet</td></tr>'
-            : products.map(function(p) { return `
-            <tr>
-                <td>${p.image
-                    ? `<img src="${p.image}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;">`
-                    : `<div class="prod-img-placeholder">🛍️</div>`}</td>
-                <td><div style="font-weight:600">${p.name}</div></td>
-                <td><span style="color:#ff6b00;font-weight:700">₹${p.price}</span></td>
-                <td><input type="number" value="${p.stock_quantity}" min="0"
-                    style="width:75px" class="form-control form-control-sm" id="stock_${p.id}"></td>
-                <td><span class="badge bg-light text-dark">${p.unit}</span></td>
-                <td><span class="status s-delivered">Active</span></td>
-                <td>
-                    <button onclick="saveStock(${p.id})" class="btn btn-sm btn-warning fw-bold me-1">
-                        <i class="bi bi-check"></i>
-                    </button>
-                    <button onclick="deleteProduct(${p.id})" class="btn btn-sm btn-danger">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>
-            </tr>`;
-            }).join('');
-    } catch(e) {
-        console.error('Products error:', e);
-    }
+        var newProducts = await api('/products/');
+
+        // Detect stock changes and flash
+        var changes = [];
+        newProducts.forEach(function(p) {
+            if (prevStockMap[p.id] !== undefined && prevStockMap[p.id] !== p.stock_quantity) {
+                changes.push({ name: p.name, old: prevStockMap[p.id], new: p.stock_quantity });
+            }
+            prevStockMap[p.id] = p.stock_quantity;
+        });
+
+        allProducts = newProducts;
+        renderProducts(allProducts);
+
+        // Show stock change notifications
+        if (changes.length > 0 && !showToast) {
+            changes.forEach(function(c) {
+                toast('📦 ' + c.name + ': ' + c.old + ' → ' + c.new + ' (order placed)', 'info');
+            });
+        }
+
+        // Update last synced time
+        var now = new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        var el = document.getElementById('stockLastUpdated');
+        if (el) el.textContent = '— synced at ' + now;
+
+    } catch(e) { console.error('Products error:', e); }
 }
+
+function renderProducts(products) {
+    document.getElementById('productsTable').innerHTML = products.length === 0
+        ? '<tr><td colspan="7" class="text-center text-muted py-4">No products found</td></tr>'
+        : products.map(function(p){
+            var changed = prevStockMap[p.id] !== undefined && prevStockMap['_flash_' + p.id];
+            return `
+        <tr id="row_${p.id}">
+            <td>${p.image
+                ? `<img src="${p.image}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;">`
+                : `<div class="prod-img-placeholder">🛍️</div>`}</td>
+            <td><div style="font-weight:600">${p.name}</div></td>
+            <td><span style="color:#ff6b00;font-weight:700">₹${p.price}</span></td>
+            <td>
+                <div class="stock-input-group">
+                    <input type="number" value="${p.stock_quantity}" min="0"
+                        class="form-control form-control-sm" id="stock_${p.id}"
+                        onkeydown="if(event.key==='Enter') saveStock(${p.id})">
+                    <span id="badge_${p.id}">${stockBadge(p.stock_quantity)}</span>
+                </div>
+            </td>
+            <td><span class="badge bg-light text-dark">${p.unit}</span></td>
+            <td><span class="status ${p.stock_quantity === 0 ? 's-outofstock' : 's-active'}" id="status_${p.id}">
+                ${p.stock_quantity === 0 ? 'Out of Stock' : 'Active'}
+            </span></td>
+            <td>
+                <button onclick="saveStock(${p.id})" class="btn btn-sm btn-warning fw-bold me-1" title="Save Stock">
+                    <i class="bi bi-check-lg"></i>
+                </button>
+                <button onclick="openEdit(${p.id})" class="btn btn-sm btn-primary me-1" title="Edit Product">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button onclick="deleteProduct(${p.id})" class="btn btn-sm btn-danger" title="Delete">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+        }).join('');
+}
+
+window.filterProducts = function(q) {
+    var filtered = allProducts.filter(function(p){
+        return p.name.toLowerCase().includes(q.toLowerCase());
+    });
+    renderProducts(filtered);
+};
 
 window.saveStock = async function(id) {
     var qty = parseInt(document.getElementById('stock_' + id).value);
-    await updateStock(id, qty);
-    toast('Stock updated successfully!');
+    if (isNaN(qty) || qty < 0) { toast('Invalid stock value', 'error'); return; }
+    try {
+        await api('/products/' + id + '/stock', 'PUT', { stock_quantity: qty });
+        toast('Stock updated to ' + qty + '!');
+        prevStockMap[id] = qty;
+        // Update inline without full reload
+        var badge = document.getElementById('badge_' + id);
+        var status = document.getElementById('status_' + id);
+        var row = document.getElementById('row_' + id);
+        if (badge) badge.innerHTML = stockBadge(qty);
+        if (status) {
+            status.className = 'status ' + (qty === 0 ? 's-outofstock' : 's-active');
+            status.textContent = qty === 0 ? 'Out of Stock' : 'Active';
+        }
+        if (row) { row.classList.add('stock-changed'); setTimeout(function(){ row.classList.remove('stock-changed'); }, 1500); }
+    } catch(e) { toast('Failed to update stock', 'error'); }
 };
 
+window.quickStockUpdate = async function(id, inputId) {
+    var qty = parseInt(document.getElementById(inputId).value);
+    if (isNaN(qty) || qty < 0) { toast('Invalid value', 'error'); return; }
+    await api('/products/' + id + '/stock', 'PUT', { stock_quantity: qty });
+    toast('Stock updated!');
+    prevStockMap[id] = qty;
+    loadDashboard();
+};
+
+window.openEdit = function(id) {
+    var p = allProducts.find(function(x){ return x.id === id; });
+    if (!p) return;
+    document.getElementById('editId').value    = p.id;
+    document.getElementById('editName').value  = p.name;
+    document.getElementById('editPrice').value = p.price;
+    document.getElementById('editStock').value = p.stock_quantity;
+    document.getElementById('editUnit').value  = p.unit;
+    document.getElementById('editModal').classList.add('show');
+};
+window.closeEdit = function() { document.getElementById('editModal').classList.remove('show'); };
+window.saveEdit = async function() {
+    var id = parseInt(document.getElementById('editId').value);
+    var data = {
+        name:           document.getElementById('editName').value.trim(),
+        price:          parseFloat(document.getElementById('editPrice').value),
+        stock_quantity: parseInt(document.getElementById('editStock').value),
+        unit:           document.getElementById('editUnit').value,
+    };
+    if (!data.name || isNaN(data.price)) { toast('Fill all fields', 'error'); return; }
+    try {
+        await api('/products/' + id, 'PUT', data);
+        toast('Product updated!');
+        closeEdit();
+        loadProducts(true);
+    } catch(e) { toast('Failed to update', 'error'); }
+};
 window.deleteProduct = async function(id) {
-    if (!confirm('Delete this product?')) return;
-    await fetch(BASE + '/products/' + id, { method: 'DELETE' });
-    toast('Product deleted', 'error');
-    loadProducts();
+    if (!confirm('Delete this product? This cannot be undone.')) return;
+    try {
+        await api('/products/' + id, 'DELETE');
+        toast('Product deleted', 'error');
+        loadProducts(true);
+    } catch(e) { toast('Failed to delete', 'error'); }
 };
 
 // ── ORDERS ──
-async function loadOrders() {
+async function loadOrders(silent) {
     try {
-        var orders = await getOrders();
+        var orders = await api('/orders/all');
         document.getElementById('orderCount').textContent = orders.length + ' orders';
         document.getElementById('ordersTable').innerHTML = orders.length === 0
-            ? '<tr><td colspan="6" class="text-center text-muted py-4">No orders yet</td></tr>'
-            : orders.map(function(o) { return `
+            ? '<tr><td colspan="7" class="text-center text-muted py-4">No orders yet</td></tr>'
+            : orders.map(function(o){
+                var itemsSummary = '';
+                if (o.items && o.items.length > 0) {
+                    itemsSummary = o.items.slice(0,2).map(function(i){ return i.name + ' x' + i.quantity; }).join(', ');
+                    if (o.items.length > 2) itemsSummary += ' +' + (o.items.length-2) + ' more';
+                } else {
+                    itemsSummary = '<span style="color:#ccc">—</span>';
+                }
+                return `
             <tr>
                 <td><span style="font-weight:700;color:#ff6b00">#${o.id}</span></td>
                 <td>Customer #${o.customer_id}</td>
+                <td style="font-size:.8rem;color:#666;max-width:160px">${itemsSummary}</td>
                 <td><strong>₹${o.total_amount}</strong></td>
                 <td><span class="status s-${o.status}">${o.status}</span></td>
                 <td style="color:#999;font-size:.8rem">${new Date(o.created_at).toLocaleDateString()}</td>
@@ -626,37 +883,44 @@ async function loadOrders() {
                 </td>
             </tr>`;
             }).join('');
-    } catch(e) {
-        console.error('Orders error:', e);
-    }
+    } catch(e) { console.error('Orders error:', e); }
 }
 
 window.changeStatus = async function(id, status) {
-    await updateOrderStatus(id, status);
-    toast('Order #' + id + ' updated to ' + status);
+    try {
+        await api('/orders/' + id + '/status', 'PUT', { status: status });
+        toast('Order #' + id + ' → ' + status);
+    } catch(e) { toast('Failed to update order', 'error'); }
 };
 
 // ── CUSTOMERS ──
 async function loadCustomers() {
     try {
-        var res = await fetch(BASE + '/customers/all');
-        var customers = await res.json();
+        var customers = await api('/customers/all');
         document.getElementById('customerCount').textContent = customers.length + ' customers';
         document.getElementById('customersTable').innerHTML = customers.length === 0
-            ? '<tr><td colspan="6" class="text-center text-muted py-4">No customers yet</td></tr>'
-            : customers.map(function(c) { return `
+            ? '<tr><td colspan="7" class="text-center text-muted py-4">No customers yet</td></tr>'
+            : customers.map(function(c){
+                var memberBadge = '';
+                if (c.membership_type === 'diamond') {
+                    memberBadge = '<span style="background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:12px;font-size:.7rem;font-weight:700">💎 Diamond</span>';
+                } else if (c.membership_type === 'gold') {
+                    memberBadge = '<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:12px;font-size:.7rem;font-weight:700">⭐ Gold</span>';
+                } else {
+                    memberBadge = '<span style="color:#ccc;font-size:.8rem">—</span>';
+                }
+                return `
             <tr>
                 <td><div class="customer-avatar">${(c.name||'U')[0].toUpperCase()}</div></td>
                 <td><strong>${c.name||'-'}</strong></td>
                 <td>${c.email||'-'}</td>
                 <td>${c.phone||'-'}</td>
+                <td>${memberBadge}</td>
                 <td style="color:#999;font-size:.8rem">${c.address||'-'}</td>
                 <td style="color:#999;font-size:.8rem">${c.created_at ? new Date(c.created_at).toLocaleDateString() : '-'}</td>
             </tr>`;
             }).join('');
-    } catch(e) {
-        toast('Failed to load customers', 'error');
-    }
+    } catch(e) { toast('Failed to load customers', 'error'); }
 }
 
 // ── ADD PRODUCT ──
@@ -666,24 +930,33 @@ window.submitProduct = async function() {
     var stock = parseInt(document.getElementById('pStock').value);
     var unit = document.getElementById('pUnit').value;
     var category_id = parseInt(document.getElementById('pCategory').value);
-
-    if (!name || !price || !stock) {
-        toast('Please fill all required fields', 'error'); return;
-    }
+    if (!name || !price || !stock) { toast('Please fill all required fields', 'error'); return; }
     try {
-        await addProduct({ name, price, stock_quantity: stock, unit, category_id, image: imgBase64 });
+        await api('/products/add', 'POST', { name, price, stock_quantity: stock, unit, category_id, image: imgBase64 });
         toast('Product added successfully!');
         document.getElementById('pName').value = '';
         document.getElementById('pPrice').value = '';
         document.getElementById('pStock').value = '';
         clearImage();
-    } catch(e) {
-        toast('Failed to add product', 'error');
-    }
+    } catch(e) { toast('Failed to add product', 'error'); }
 };
 
-// Load dashboard on start
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEdit();
+});
+window.quickSearch = function(q) {
+    if (!q) return;
+    showSection('products', document.getElementById('nav-products'));
+    setTimeout(function(){ filterProducts(q); }, 100);
+};
+
+// ── INIT ──
 loadDashboard();
+// Initialize prevStockMap
+api('/products/').then(function(products) {
+    products.forEach(function(p){ prevStockMap[p.id] = p.stock_quantity; });
+});
+startAutoRefresh();
 </script>
 </body>
 </html>

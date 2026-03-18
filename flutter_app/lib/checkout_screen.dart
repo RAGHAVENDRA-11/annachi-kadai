@@ -5,7 +5,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'main.dart';
 import 'api_service.dart';
-
+import 'home_screen.dart';
+import 'prefs_helper.dart';
+import 'membership_provider.dart';
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
   @override
@@ -34,8 +36,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   double? _lat, _lng;
   String _resolvedAddress = '';
   String _paymentMethod = 'cod'; // 'cod' only for now
+  String _membershipCard = '';
+  String _membershipType = '';
+  bool _useMembership = false;
+  bool _usePoints = false;
+  int _rewardPoints = 0; // 1 point = ₹1
   String _distanceText    = '';
   String _locationError   = '';
+  final _addressCtrl      = TextEditingController(); // manual delivery address
+  int _monthlyLimit       = 0;   // max spend per month for membership
+  double _monthlySpent    = 0.0; // spent this month
+  double _monthlyRemaining = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    // Membership loaded from MembershipProvider (DB-backed, no prefs)
+    final prefs = await SharedPreferences.getInstance();
+    final cid = (prefs.get('customer_id') ?? '').toString();
+    final mem = context.read<MembershipProvider>();
+    if (mem.membershipType.isEmpty && cid.isNotEmpty) {
+      await mem.load(cid);
+    }
+    if (mounted) setState(() {
+      _membershipType   = mem.membershipType;
+      _membershipCard   = mem.cardNumber;
+      _rewardPoints     = mem.rewardPoints;
+      _monthlyLimit     = mem.monthlyLimit;
+      _monthlySpent     = mem.monthlySpent;
+      _monthlyRemaining = mem.monthlyRemaining;
+    });
+  }
+
+  String _currentMonthKey() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  }
 
   // ── GET GPS LOCATION ──
   Future<void> _detectLocation() async {
@@ -77,8 +117,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       setState(() => _locationSet = true);
-
-      // Auto-validate distance
+      _addressCtrl.text = _resolvedAddress; // pre-fill editable address
       await _validateDistance();
 
     } catch (e) {
@@ -110,12 +149,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _placeOrder(BuildContext context) async {
     if (!_addressValid) { _snack('Please detect your location first', isError: true); return; }
     final cart = context.read<CartProvider>();
+
+    // Check monthly limit for members
+    if (_membershipType.isNotEmpty && _monthlyLimit > 0) {
+      final orderTotal = cart.totalPrice;
+      if (_monthlySpent + orderTotal > _monthlyLimit) {
+        final remaining = (_monthlyLimit - _monthlySpent).clamp(0.0, _monthlyLimit.toDouble());
+        _snack('Monthly limit exceeded! You have ₹${remaining.toStringAsFixed(0)} remaining this month.', isError: true);
+        return;
+      }
+    }
+
     setState(() => _placing = true);
     try {
       final prefs = await SharedPreferences.getInstance();
-      final customerId    = prefs.getInt('customer_id') ?? 1;
+      final customerId    = int.tryParse((prefs.get('customer_id') ?? '').toString()) ?? 1;
       final customerName  = prefs.getString('customer_name') ?? '';
       final customerEmail = prefs.getString('customer_email') ?? '';
+      // (membership already loaded in initState)
+
+      final hasMembership = _useMembership && (_membershipType == 'diamond' || _membershipType == 'gold');
+      final delivery = (cart.totalPrice >= 299 || hasMembership) ? 0.0 : 40.0;
+      final ptsDiscount = (_usePoints && _rewardPoints > 0 && cart.totalPrice >= 1000)
+          ? _rewardPoints.toDouble().clamp(0.0, cart.totalPrice * 0.5) : 0.0;
+      final grandTotal = cart.totalPrice + delivery - ptsDiscount;
 
       final items = cart.items.map((i) => {
         'product_id': i['id'],
@@ -129,16 +186,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'customer_id':       customerId,
         'customer_name':     customerName,
         'customer_email':    customerEmail,
-        'delivery_address':  _resolvedAddress,
+        'delivery_address':  _addressCtrl.text.trim().isNotEmpty
+            ? _addressCtrl.text.trim() : _resolvedAddress,
         'delivery_lat':      _lat,
         'delivery_lng':      _lng,
         'notes':             _notesCtrl.text.trim(),
         'payment_method':    _paymentMethod,
         'items':             items,
-        'total_amount':      cart.totalPrice,
+        'total_amount':      grandTotal,
       });
 
       cart.clear();
+
+      // ── Track spend + points via MembershipProvider ──
+      final mem = context.read<MembershipProvider>();
+      await mem.recordSpend(customerId.toString(), grandTotal);
+      if (_usePoints && _rewardPoints > 0) {
+        await mem.redeemPoints(customerId.toString());
+      }
+
       if (mounted) _showSuccess(context, orderId: res['order_id']?.toString() ?? '');
     } catch (e) {
       _snack(e.toString().replaceAll('Exception: ', ''), isError: true);
@@ -200,9 +266,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(vertical: 14)),
               onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
               },
               child: const Text('Back to Shop', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
             ),
@@ -375,6 +442,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
           const SizedBox(height: 14),
 
+          // ── DELIVERY ADDRESS (editable after location verified) ──
+          if (_addressValid)
+            _card(
+              icon: Icons.home_rounded, iconColor: _green,
+              title: 'Delivery Address',
+              subtitle: 'Confirm or edit your address',
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                TextFormField(
+                  controller: _addressCtrl,
+                  maxLines: 3,
+                  style: const TextStyle(color: _navy, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Door no, Street, Landmark, Area...',
+                    hintStyle: TextStyle(color: _grey, fontSize: 12),
+                    filled: true,
+                    fillColor: _greyLt,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: _border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: _border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: _green, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.all(12),
+                    prefixIcon: const Icon(Icons.edit_location_alt_rounded,
+                        color: _green, size: 20),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(children: [
+                  Icon(Icons.info_outline_rounded, size: 13, color: _grey),
+                  const SizedBox(width: 4),
+                  Expanded(child: Text(
+                    'GPS detected your location. Add door no / landmark for faster delivery.',
+                    style: TextStyle(color: _grey, fontSize: 11),
+                  )),
+                ]),
+              ]),
+            ),
+
+          const SizedBox(height: 14),
+
           // ── DELIVERY NOTES ──
           _card(
             icon: Icons.note_alt_outlined, iconColor: _amber,
@@ -389,46 +503,197 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const SizedBox(height: 14),
 
           // ── ORDER SUMMARY ──
-          _card(
-            icon: Icons.receipt_long_rounded, iconColor: _amber,
-            title: 'Order Summary',
-            subtitle: '${cart.totalItems} item${cart.totalItems != 1 ? 's' : ''}',
-            child: Column(children: [
-              ...cart.items.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(children: [
-                  Container(width: 36, height: 36,
-                      decoration: BoxDecoration(color: _yellow.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Icon(Icons.shopping_bag_outlined, color: _amber, size: 18)),
-                  const SizedBox(width: 10),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(item['name'], style: TextStyle(color: _navy,
-                        fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text('${item['unit']} × ${item['quantity']}',
-                        style: TextStyle(color: _grey, fontSize: 11)),
-                  ])),
-                  Text('₹${(item['price'] * item['quantity']).toStringAsFixed(0)}',
-                      style: TextStyle(color: _navy, fontWeight: FontWeight.w700, fontSize: 14)),
+          Builder(builder: (context) {
+            final cart = context.watch<CartProvider>();
+            final subtotal = cart.totalPrice;
+            final hasMembership = _useMembership && (_membershipType == 'diamond' || _membershipType == 'gold');
+            final deliveryCharge = (subtotal >= 299 || hasMembership) ? 0.0 : 40.0;
+            final pointsDiscount = (_usePoints && _rewardPoints > 0 && subtotal >= 1000)
+                ? _rewardPoints.toDouble().clamp(0, subtotal * 0.5) : 0.0;
+            final grandTotal = subtotal + deliveryCharge - pointsDiscount;
+
+            return _card(
+              icon: Icons.receipt_long_rounded, iconColor: _amber,
+              title: 'Order Summary',
+              subtitle: '${cart.totalItems} item${cart.totalItems != 1 ? 's' : ''}',
+              child: Column(children: [
+                ...cart.items.map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(children: [
+                    Container(width: 36, height: 36,
+                        decoration: BoxDecoration(color: _yellow.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Icon(Icons.shopping_bag_outlined, color: _amber, size: 18)),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(item['name'], style: const TextStyle(color: _navy,
+                          fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text('${item['unit']} × ${item['quantity']}',
+                          style: const TextStyle(color: _grey, fontSize: 11)),
+                    ])),
+                    Text('₹${(item['price'] * item['quantity']).toStringAsFixed(0)}',
+                        style: const TextStyle(color: _navy, fontWeight: FontWeight.w700, fontSize: 14)),
+                  ]),
+                )),
+                const Divider(),
+                // Subtotal
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  const Text('Subtotal', style: TextStyle(color: _grey, fontSize: 13)),
+                  Text('₹${subtotal.toStringAsFixed(0)}',
+                      style: const TextStyle(color: _navy, fontSize: 13)),
                 ]),
-              )),
-              Divider(color: _border),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Delivery', style: TextStyle(color: _grey, fontSize: 13)),
-                Text('FREE', style: TextStyle(color: _green, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                // Delivery
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Row(children: [
+                    const Text('Delivery', style: TextStyle(color: _grey, fontSize: 13)),
+                    if (deliveryCharge == 0 && hasMembership) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1F36).withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(_membershipType == 'diamond' ? '💎 Pass' : '⭐ Pass',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                    ] else if (deliveryCharge == 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('Above ₹299', style: TextStyle(
+                            color: _green, fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ]),
+                  deliveryCharge == 0
+                      ? const Text('FREE', style: TextStyle(
+                          color: _green, fontWeight: FontWeight.w700))
+                      : Text('₹${deliveryCharge.toStringAsFixed(0)}',
+                          style: const TextStyle(color: _navy, fontWeight: FontWeight.w600, fontSize: 13)),
+                ]),
+                if (deliveryCharge > 0) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _yellow.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _yellow.withOpacity(0.3)),
+                    ),
+                    child: Row(children: [
+                      Icon(Icons.info_outline_rounded, color: _amber, size: 14),
+                      const SizedBox(width: 6),
+                      Expanded(child: Text(
+                        'Add ₹${(299 - subtotal).toStringAsFixed(0)} more for free delivery, or apply your membership card.',
+                        style: TextStyle(color: _amber, fontSize: 11),
+                      )),
+                    ]),
+                  ),
+                ],
+                // Points discount row
+                if (_usePoints && pointsDiscount > 0) ...[
+                  const SizedBox(height: 6),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Row(children: [
+                      const Text('Points Redeemed', style: TextStyle(color: _grey, fontSize: 13)),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _green.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                        child: Text('${pointsDiscount.toInt()} pts',
+                            style: const TextStyle(color: _green, fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                    ]),
+                    Text('- ₹${pointsDiscount.toStringAsFixed(0)}',
+                        style: const TextStyle(color: _green, fontWeight: FontWeight.w700, fontSize: 13)),
+                  ]),
+                ],
+                const SizedBox(height: 8),
+                const Divider(),
+                const SizedBox(height: 4),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  const Text('Total', style: TextStyle(color: _navy, fontWeight: FontWeight.w800, fontSize: 16)),
+                  Text('₹${grandTotal.toStringAsFixed(2)}',
+                      style: const TextStyle(color: _navy, fontWeight: FontWeight.w800, fontSize: 18)),
+                ]),
               ]),
-              const SizedBox(height: 8),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Total', style: TextStyle(color: _navy, fontWeight: FontWeight.w800, fontSize: 16)),
-                Text('₹${cart.totalPrice.toStringAsFixed(2)}',
-                    style: TextStyle(color: _navy, fontWeight: FontWeight.w800, fontSize: 18)),
-              ]),
-            ]),
-          ),
+            );
+          }),
 
           const SizedBox(height: 14),
 
-          // ── PAYMENT METHOD ──
+          // ── REDEEM POINTS ──
+          if (_rewardPoints > 0) ...[
+            const SizedBox(height: 14),
+            Builder(builder: (context) {
+              final cart = context.watch<CartProvider>();
+              final eligible = cart.totalPrice >= 1000;
+              return _card(
+                icon: Icons.stars_rounded, iconColor: const Color(0xFFD97706),
+                title: 'Reward Points',
+                subtitle: 'You have $_rewardPoints points = ₹$_rewardPoints',
+                child: GestureDetector(
+                  onTap: eligible ? () => setState(() => _usePoints = !_usePoints) : null,
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: !eligible
+                          ? _greyLt
+                          : _usePoints ? _green.withOpacity(0.08) : _greyLt,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: !eligible
+                              ? _border
+                              : _usePoints ? _green.withOpacity(0.4) : _border),
+                    ),
+                    child: Row(children: [
+                      Container(width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: !eligible
+                              ? _border.withOpacity(0.5)
+                              : _usePoints ? _green.withOpacity(0.15) : _border.withOpacity(0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.toll_rounded,
+                            color: !eligible ? _grey : (_usePoints ? _green : _grey), size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Redeem $_rewardPoints Points',
+                            style: TextStyle(
+                                color: eligible ? _navy : _grey,
+                                fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text(
+                          !eligible
+                              ? 'Available for orders above ₹1,000'
+                              : (_usePoints
+                                  ? '✓ Saving ₹$_rewardPoints on this order'
+                                  : 'Tap to use your reward points'),
+                          style: TextStyle(
+                              color: !eligible ? _grey : (_usePoints ? _green : _grey),
+                              fontSize: 11)),
+                      ])),
+                      Container(width: 24, height: 24,
+                        decoration: BoxDecoration(
+                            color: !eligible ? _border : (_usePoints ? _green : _border),
+                            shape: BoxShape.circle),
+                        child: Icon(
+                            !eligible ? Icons.lock_rounded : (_usePoints ? Icons.check : Icons.add),
+                            color: Colors.white, size: 14),
+                      ),
+                    ]),
+                  ),
+                ),
+              );
+            }),
+          ],
           _card(
             icon: Icons.payment_rounded, iconColor: const Color(0xFF8B5CF6),
             title: 'Payment Method',
@@ -443,6 +708,108 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ]),
           ),
+
+          const SizedBox(height: 14),
+
+          // ── MEMBERSHIP CARD ──
+          if (_membershipCard.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            // Monthly limit banner
+            if (_monthlyLimit > 0)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _membershipType == 'diamond'
+                      ? const Color(0xFF1A1F36).withOpacity(0.06)
+                      : const Color(0xFFD97706).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _membershipType == 'diamond'
+                      ? const Color(0xFF818CF8).withOpacity(0.3)
+                      : const Color(0xFFD97706).withOpacity(0.3)),
+                ),
+                child: Column(children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Row(children: [
+                      Icon(_membershipType == 'diamond'
+                          ? Icons.diamond_rounded : Icons.star_rounded,
+                          color: _membershipType == 'diamond'
+                              ? const Color(0xFF818CF8) : const Color(0xFFD97706),
+                          size: 16),
+                      const SizedBox(width: 6),
+                      Text('${_membershipType == 'diamond' ? 'Diamond' : 'Gold'} Pass — Monthly Limit',
+                          style: const TextStyle(color: _navy, fontWeight: FontWeight.bold, fontSize: 12)),
+                    ]),
+                    Text('₹${_monthlyRemaining.toStringAsFixed(0)} left',
+                        style: TextStyle(
+                            color: _monthlyRemaining < 200 ? _red : _green,
+                            fontWeight: FontWeight.bold, fontSize: 12)),
+                  ]),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _monthlyLimit > 0 ? (_monthlyRemaining / _monthlyLimit).clamp(0.0, 1.0) : 0.0,
+                      minHeight: 6,
+                      backgroundColor: _border,
+                      color: _monthlyRemaining < 200 ? _red : _green,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Text('Spent: ₹${_monthlySpent.toStringAsFixed(0)}',
+                        style: const TextStyle(color: _grey, fontSize: 11)),
+                    Text('Limit: ₹$_monthlyLimit/month',
+                        style: const TextStyle(color: _grey, fontSize: 11)),
+                  ]),
+                ]),
+              ),
+            _card(
+              icon: Icons.workspace_premium_rounded, iconColor: const Color(0xFF818CF8),
+              title: 'Membership Card',
+              subtitle: 'Apply your ${_membershipType == 'diamond' ? 'Diamond' : 'Gold'} Pass',
+              child: GestureDetector(
+                onTap: () => setState(() => _useMembership = !_useMembership),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: _membershipType == 'diamond'
+                          ? [const Color(0xFF1A1F36), const Color(0xFF2D3561)]
+                          : [const Color(0xFFB45309), const Color(0xFFD97706)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(children: [
+                    Icon(_membershipType == 'diamond'
+                        ? Icons.diamond_rounded : Icons.star_rounded,
+                        color: _membershipType == 'diamond'
+                            ? const Color(0xFF818CF8) : _yellow, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(_membershipCard,
+                          style: const TextStyle(color: Colors.white,
+                              fontWeight: FontWeight.w600, fontSize: 13, letterSpacing: 1)),
+                      const SizedBox(height: 2),
+                      Text(_useMembership ? '✓ Card applied' : 'Tap to apply card',
+                          style: TextStyle(
+                              color: _useMembership ? _green : Colors.white54,
+                              fontSize: 11, fontWeight: FontWeight.w600)),
+                    ])),
+                    Container(
+                      width: 24, height: 24,
+                      decoration: BoxDecoration(
+                        color: _useMembership ? _green : Colors.white24,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(_useMembership ? Icons.check : Icons.add,
+                          color: Colors.white, size: 14),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ], // end membership block
 
           const SizedBox(height: 14),
 
@@ -481,12 +848,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: _placing
                   ? SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: _navy, strokeWidth: 2.5))
-                  : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(Icons.lock_rounded, size: 18),
-                      const SizedBox(width: 10),
-                      Text('Place Order · ₹${cart.totalPrice.toStringAsFixed(0)}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                    ]),
+                  : Builder(builder: (ctx) {
+                      final c = ctx.watch<CartProvider>();
+                      final hasMembership = _useMembership && (_membershipType == 'diamond' || _membershipType == 'gold');
+                      final delivery = (c.totalPrice >= 299 || hasMembership) ? 0.0 : 40.0;
+                      final pts = (_usePoints && _rewardPoints > 0 && c.totalPrice >= 1000)
+                          ? _rewardPoints.toDouble().clamp(0, c.totalPrice * 0.5) : 0.0;
+                      final grand = c.totalPrice + delivery - pts;
+                      return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const Icon(Icons.lock_rounded, size: 18),
+                        const SizedBox(width: 10),
+                        Text('Place Order · ₹${grand.toStringAsFixed(0)}',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                      ]);
+                    }),
             ),
           ),
           if (!_addressValid) ...[

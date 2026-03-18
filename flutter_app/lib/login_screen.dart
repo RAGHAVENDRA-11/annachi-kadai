@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'delivery_screen.dart';
+import 'prefs_helper.dart';
+import 'membership_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -84,10 +88,18 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       final res = await ApiService.loginVerifyOtp(_emailCtrl.text.trim(), otp);
       if (res.containsKey('id')) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('customer_id', res['id']);
+        await prefs.setString('customer_id', res['id'].toString());
         await prefs.setString('customer_name', res['name'] ?? '');
         await prefs.setString('customer_email', res['email'] ?? '');
-        if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+        await prefs.setString('customer_phone', res['phone'] ?? '');
+        await prefs.setString('customer_address', res['address'] ?? '');
+
+        // Load membership fresh from DB
+        if (mounted) {
+          await context.read<MembershipProvider>().load(res['id'].toString());
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()));
+        }
       } else {
         _snack(res['detail'] ?? 'Invalid OTP', isError: true);
       }
@@ -276,6 +288,29 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               fontWeight: FontWeight.w700, fontSize: 13)),
         ),
       ])),
+      const SizedBox(height: 20),
+      // Delivery partner login
+      GestureDetector(
+        onTap: () => Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const DeliveryLoginScreen())),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFF1A1F36).withOpacity(0.2)),
+            borderRadius: BorderRadius.circular(14),
+            color: const Color(0xFF1A1F36).withOpacity(0.05),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.delivery_dining_rounded,
+                color: Color(0xFF1A1F36), size: 20),
+            const SizedBox(width: 8),
+            const Text('Delivery Partner Login',
+                style: TextStyle(color: Color(0xFF1A1F36),
+                    fontWeight: FontWeight.w700, fontSize: 14)),
+          ]),
+        ),
+      ),
     ]);
   }
 

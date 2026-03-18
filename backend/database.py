@@ -15,7 +15,8 @@ DB_PASS = os.getenv('DB_PASS', '')
 DB_NAME = os.getenv('DB_NAME', 'annachi_kadai')
 DB_SSL  = os.getenv('DB_SSL', 'false').lower() == 'true'
 
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+from urllib.parse import quote_plus
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{quote_plus(DB_PASS)}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 print(f"[DB] Connecting to {DB_HOST}:{DB_PORT}/{DB_NAME} (SSL={DB_SSL})")
 

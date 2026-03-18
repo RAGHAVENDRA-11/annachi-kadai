@@ -12,8 +12,8 @@ import json
 
 router = APIRouter()
 
-SHOP_LAT = 11.069003
-SHOP_LNG = 76.901283
+SHOP_LAT = 11.085015
+SHOP_LNG = 76.998475
 MAX_DISTANCE_KM = 3.0
 
 
@@ -101,16 +101,29 @@ def place_order_with_bill(data: dict, db: Session = Depends(get_db)):
         db.commit()
         order_id = res.lastrowid
 
+        # Ensure price column exists
         try:
-            for item in items:
-                db.execute(text("""
-                    INSERT INTO order_items (order_id, product_id, quantity, price)
-                    VALUES (:oid, :pid, :qty, :price)
-                """), {"oid": order_id, "pid": item.get('product_id'),
-                       "qty": item.get('quantity'), "price": item.get('price')})
+            db.execute(text("ALTER TABLE order_items ADD COLUMN price DECIMAL(10,2) DEFAULT 0.00"))
             db.commit()
         except Exception:
-            db.rollback()
+            pass  # column already exists
+
+        for item in items:
+            product_id = item.get('product_id')
+            quantity   = int(item.get('quantity', 1))
+            price      = float(item.get('price', 0))
+
+            db.execute(text("""
+                INSERT INTO order_items (order_id, product_id, quantity, price)
+                VALUES (:oid, :pid, :qty, :price)
+            """), {"oid": order_id, "pid": product_id, "qty": quantity, "price": price})
+
+            db.execute(text("""
+                UPDATE products SET stock_quantity = GREATEST(stock_quantity - :qty, 0)
+                WHERE id = :pid
+            """), {"qty": quantity, "pid": product_id})
+
+        db.commit()
 
         pdf_path = generate_bill_pdf(
             order_id=order_id,
@@ -184,3 +197,93 @@ def place_order(data: dict, db: Session = Depends(get_db)):
 def get_all_orders(db: Session = Depends(get_db)):
     result = db.execute(text("SELECT * FROM orders ORDER BY id DESC"))
     return [dict(r) for r in result.mappings().all()]
+
+
+# ── UPDATE ORDER STATUS (admin) ──
+@router.put("/{order_id}/status")
+def update_order_status(order_id: int, data: dict, db: Session = Depends(get_db)):
+    status = data.get("status")
+    allowed = ["pending", "confirmed", "processing", "on_the_way", "delivered", "cancelled"]
+    if status not in allowed:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of {allowed}")
+
+    # Auto-migrate ENUM to VARCHAR to support new statuses
+    try:
+        db.execute(text("ALTER TABLE orders MODIFY COLUMN status VARCHAR(20) NOT NULL DEFAULT 'pending'"))
+        db.commit()
+    except Exception:
+        pass  # already VARCHAR or migration already done
+
+    db.execute(text("UPDATE orders SET status = :status WHERE id = :oid"),
+               {"status": status, "oid": order_id})
+    db.commit()
+    return {"order_id": order_id, "status": status, "message": "Order status updated"}
+
+
+# ── DELIVERY BOY ENDPOINTS ──
+
+@router.get("/delivery/active")
+def get_active_orders(db: Session = Depends(get_db)):
+    """Get all active orders for delivery dashboard"""
+    try:
+        # Add delivery_address column if missing
+        try:
+            db.execute(text("ALTER TABLE orders ADD COLUMN delivery_address TEXT"))
+            db.commit()
+        except Exception:
+            pass
+
+        result = db.execute(text("""
+            SELECT o.id, o.customer_id, o.total_amount, o.status,
+                   o.delivery_address, o.created_at,
+                   c.name as customer_name, c.phone as customer_phone
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id
+            WHERE o.status NOT IN ('delivered', 'cancelled')
+            ORDER BY o.created_at DESC
+        """)).mappings().all()
+
+        orders = []
+        for row in result:
+            o = dict(row)
+            # Get items
+            items = db.execute(text("""
+                SELECT oi.quantity, oi.price, p.name, p.unit
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = :oid
+            """), {"oid": o["id"]}).mappings().all()
+            o["items"] = [dict(i) for i in items]
+            o["created_at"] = str(o["created_at"])
+            orders.append(o)
+        return orders
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/delivery/history")
+def get_delivery_history(db: Session = Depends(get_db)):
+    """Get recently delivered orders"""
+    try:
+        result = db.execute(text("""
+            SELECT o.id, o.customer_id, o.total_amount, o.status,
+                   o.delivery_address, o.created_at,
+                   c.name as customer_name, c.phone as customer_phone
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id
+            WHERE o.status = 'delivered'
+            ORDER BY o.created_at DESC LIMIT 20
+        """)).mappings().all()
+        orders = []
+        for row in result:
+            o = dict(row)
+            items = db.execute(text("""
+                SELECT oi.quantity, oi.price, p.name, p.unit
+                FROM order_items oi JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = :oid
+            """), {"oid": o["id"]}).mappings().all()
+            o["items"] = [dict(i) for i in items]
+            o["created_at"] = str(o["created_at"])
+            orders.append(o)
+        return orders
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

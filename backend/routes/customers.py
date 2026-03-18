@@ -34,11 +34,18 @@ def register_verify_otp(data: dict, db: Session = Depends(get_db)):
     email = data.get('email', '').strip()
     otp   = data.get('otp', '').strip()
     name  = data.get('name', '').strip()
-    phone = data.get('phone', '').strip()
+    phone = data.get('phone', '').strip()  # keep as empty string, not NULL
 
     result = verify_otp(email, otp)
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
+
+    # Check if customer already exists
+    existing = db.execute(text(
+        "SELECT * FROM customers WHERE email = :email"
+    ), {"email": email}).mappings().first()
+    if existing:
+        return dict(existing)
 
     res = db.execute(text("""
         INSERT INTO customers (name, phone, email)
@@ -120,3 +127,61 @@ def get_customer(phone: str, db: Session = Depends(get_db)):
         text("SELECT * FROM customers WHERE phone = :phone"),
         {"phone": phone})
     return result.mappings().first()
+
+@router.put("/{customer_id}")
+def update_customer(customer_id: int, data: dict, db: Session = Depends(get_db)):
+    fields = []
+    params = {"cid": customer_id}
+    if "name" in data:
+        fields.append("name = :name"); params["name"] = data["name"]
+    if "phone" in data:
+        fields.append("phone = :phone"); params["phone"] = data["phone"]
+    if "address" in data:
+        fields.append("address = :address"); params["address"] = data["address"]
+    if not fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    db.execute(text(f"UPDATE customers SET {', '.join(fields)} WHERE id = :cid"), params)
+    db.commit()
+    return {"success": True, "message": "Profile updated"}
+
+@router.post("/membership/purchase")
+def purchase_membership(data: dict, db: Session = Depends(get_db)):
+    customer_id  = data.get("customer_id")
+    member_type  = data.get("type")
+    card_number  = data.get("card_number")
+    valid_until  = data.get("valid_until")
+
+    if not all([customer_id, member_type, card_number]):
+        raise HTTPException(status_code=400, detail="Missing fields")
+
+    # Check if membership column exists, add if not
+    try:
+        db.execute(text("ALTER TABLE customers ADD COLUMN membership_type VARCHAR(20) DEFAULT ''"))
+        db.execute(text("ALTER TABLE customers ADD COLUMN membership_card VARCHAR(30) DEFAULT ''"))
+        db.execute(text("ALTER TABLE customers ADD COLUMN membership_valid_until VARCHAR(10) DEFAULT ''"))
+        db.commit()
+    except Exception:
+        pass  # columns already exist
+
+    db.execute(text("""
+        UPDATE customers SET
+            membership_type = :mtype,
+            membership_card = :card,
+            membership_valid_until = :valid
+        WHERE id = :cid
+    """), {"mtype": member_type, "card": card_number, "valid": valid_until, "cid": customer_id})
+    db.commit()
+    return {"success": True, "message": f"{member_type} membership activated"}
+
+@router.get("/membership/{customer_id}")
+def get_membership(customer_id: int, db: Session = Depends(get_db)):
+    try:
+        result = db.execute(text("""
+            SELECT membership_type, membership_card, membership_valid_until
+            FROM customers WHERE id = :cid
+        """), {"cid": customer_id}).mappings().first()
+        if result:
+            return dict(result)
+        return {"membership_type": "", "membership_card": "", "membership_valid_until": ""}
+    except Exception:
+        return {"membership_type": "", "membership_card": "", "membership_valid_until": ""}
