@@ -1,131 +1,132 @@
 # 🛒 Annachi Kadai — AI-Powered Hyperlocal Grocery App
 
-A full-stack hyperlocal grocery management system with AI features, OTP login, voice ordering, and real-time inventory management.
+A full-stack hyperlocal grocery delivery system built with Flutter, FastAPI, and MySQL. Inspired by Zepto/Blinkit — designed for small neighbourhood stores.
 
 ---
 
-## 📦 Tech Stack
+## 📱 Screenshots
+
+| Customer App | Delivery Partner | Admin Dashboard |
+|---|---|---|
+| Product listing with categories | Live order tracking | Stock management |
+| Voice ordering | Route navigation | Revenue analytics |
+| AI chatbot | Status updates | Customer management |
+
+---
+
+## 🏗️ Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Mobile App | Flutter (Windows / Android) |
-| Backend API | FastAPI (Python) |
-| Database | MySQL |
-| Admin Dashboard | HTML + Bootstrap 5 |
-| AI Features | scikit-learn, pandas, numpy |
-| Authentication | Email OTP via Gmail SMTP |
+|---|---|
+| **Mobile App** | Flutter (Android + Windows) |
+| **Backend API** | FastAPI (Python) |
+| **Database** | MySQL |
+| **Admin Dashboard** | HTML + Bootstrap 5 |
+| **AI Chatbot** | Groq API (LLaMA 3.3 70B) |
+| **Maps** | Google Maps / Geo URI |
+| **PDF Bills** | ReportLab |
+| **Email** | SMTP (Gmail) |
 
 ---
 
-## 🗂️ Project Structure
+## 🚀 Features
+
+### 👤 Customer App
+- **OTP-based login & registration** via email
+- **Product browsing** with categories (Grocery, Ice Cream, Stationery)
+- **Product detail screen** with stock status, images, add to cart
+- **Voice ordering** — say "Rendu Pepsi, Moonu Bites" in Tamil/English/Tanglish
+- **AI Chatbot** — Groq-powered assistant for product queries and cart actions
+- **Cart** with delivery charge logic (free above ₹299)
+- **Checkout** with GPS location detection, editable delivery address, 3km radius validation
+- **Membership Plans** — Diamond Pass (₹10,000) & Gold Pass (₹26,000)
+  - Virtual debit card with card number
+  - Free delivery on all orders
+  - Monthly spending limits (₹1,000 / ₹2,500)
+  - Auto monthly reset for 12 months
+- **Reward Points** — earn 1 point per ₹1,000 spent, redeem on orders above ₹1,000
+- **Order tracking** with real-time status updates (15s auto-refresh)
+- **PDF bill** emailed to customer after every order
+- **Order history** with full item details
+
+### 🛵 Delivery Partner App
+- **Separate login portal** with phone + password authentication
+- **Registration** with name, phone, email, vehicle number
+- **Home tab** — today's active orders only with live countdown timer
+- **Orders tab** — all orders (active + delivered history)
+- **Profile tab** — partner details, change password, logout
+- **Navigate button** — opens Google Maps with delivery address for route
+- **Tap-to-call** customer directly from order card
+- **Status flow** — Pending → Confirmed → Processing → Out for Delivery → Delivered
+- **Live timer** per order (green → amber → red based on elapsed time)
+- **Auto-refresh** every 15 seconds
+- **Switch to Customer Portal** button
+
+### 🖥️ Admin Dashboard
+- **Dashboard** with stats — total products, orders, pending, low stock
+- **Revenue cards** — today's revenue, total delivered revenue
+- **Low stock alerts** with inline stock update
+- **Product management** — add, edit, delete, update stock
+- **Order management** — view all orders, update status
+- **Customer list** with membership badges (💎 Diamond / ⭐ Gold)
+- **Auto-refresh** every 15 seconds with stock change notifications
+- **Search** across products
+
+---
+
+## 📂 Project Structure
 
 ```
 annachi-kadai/
-├── backend/                  # FastAPI backend
+├── backend/                    # FastAPI backend
 │   ├── routes/
-│   │   ├── products.py       # Product CRUD
-│   │   ├── customers.py      # Customer registration
-│   │   ├── orders.py         # Order management
-│   │   ├── auth.py           # OTP login
-│   │   └── ai_routes.py      # AI endpoints
-│   ├── main.py               # App entry point
-│   ├── database.py           # DB connection
-│   ├── ai_features.py        # ML models
-│   ├── otp_service.py        # Gmail OTP
-│   ├── requirements.txt      # Python dependencies
-│   └── .env                  # Environment variables (not in git)
+│   │   ├── products.py         # Product CRUD + stock management
+│   │   ├── customers.py        # Customer auth + membership
+│   │   ├── orders.py           # Order placement + delivery tracking
+│   │   ├── ai_routes.py        # Groq AI chatbot
+│   │   ├── auth.py             # OTP authentication
+│   │   └── delivery_partners.py # Delivery partner auth
+│   ├── main.py                 # FastAPI app entry point
+│   ├── database.py             # SQLAlchemy DB connection
+│   ├── bill_service.py         # PDF bill generation + email
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── .env                    # Environment variables (not committed)
 │
-├── admin-dashboard/          # Web admin panel
-│   └── index.html            # Bootstrap dashboard
-│
-├── flutter_app/              # Flutter customer app
+├── flutter_app/                # Flutter mobile app
 │   └── lib/
-│       ├── main.dart
-│       ├── login_screen.dart
+│       ├── main.dart           # App entry + CartProvider
+│       ├── membership_provider.dart  # MembershipProvider (DB-backed)
+│       ├── prefs_helper.dart   # SharedPreferences utility
+│       ├── api_service.dart    # All API calls
+│       ├── login_screen.dart   # OTP login
 │       ├── register_screen.dart
-│       ├── home_screen.dart
+│       ├── home_screen.dart    # Main shell with bottom nav
 │       ├── products_screen.dart
+│       ├── product_detail_screen.dart
 │       ├── cart_screen.dart
-│       ├── voice_order_screen.dart
-│       └── api_service.dart
+│       ├── checkout_screen.dart
+│       ├── orders_screen.dart
+│       ├── membership_screen.dart
+│       ├── voice_screen.dart   # Voice ordering
+│       ├── chat_screen.dart    # AI chatbot
+│       └── delivery_screen.dart # Delivery partner portal
 │
-└── README.md
+└── admin-dashboard/
+    └── index.html              # Bootstrap admin panel
 ```
 
 ---
 
 ## ⚙️ Setup & Installation
 
-### 1. Prerequisites
-
+### Prerequisites
 - Python 3.10+
-- Flutter SDK
-- MySQL Server
-- Gmail account with App Password
+- Flutter 3.x
+- MySQL 8.0
+- Node.js (optional, for live server)
 
----
-
-### 2. MySQL Database Setup
-
-Open MySQL terminal and run:
-
-```sql
-CREATE DATABASE annachi_kadai;
-USE annachi_kadai;
-
-CREATE TABLE categories (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100)
-);
-
-CREATE TABLE products (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(200),
-  category_id INT,
-  price DECIMAL(10,2),
-  stock_quantity INT DEFAULT 0,
-  unit VARCHAR(50),
-  image LONGTEXT,
-  is_available TINYINT DEFAULT 1,
-  FOREIGN KEY (category_id) REFERENCES categories(id)
-);
-
-CREATE TABLE customers (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(200),
-  phone VARCHAR(15) UNIQUE,
-  address TEXT,
-  email VARCHAR(200),
-  latitude FLOAT DEFAULT 0,
-  longitude FLOAT DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE orders (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  customer_id INT,
-  total_amount DECIMAL(10,2),
-  status ENUM('pending','confirmed','delivered','cancelled') DEFAULT 'pending',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (customer_id) REFERENCES customers(id)
-);
-
-CREATE TABLE order_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  order_id INT,
-  product_id INT,
-  quantity INT,
-  price DECIMAL(10,2),
-  FOREIGN KEY (order_id) REFERENCES orders(id),
-  FOREIGN KEY (product_id) REFERENCES products(id)
-);
-
-INSERT INTO categories (name) VALUES ('Grocery'), ('Ice Cream'), ('Stationery');
-```
-
----
-
-### 3. Backend Setup
+### Backend Setup
 
 ```powershell
 cd backend
@@ -137,160 +138,147 @@ venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Create .env file
-```
+# Configure environment
+cp .env.example .env
+# Edit .env with your credentials
 
-Create `backend/.env`:
-```env
-DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@127.0.0.1/annachi_kadai
-EMAIL_ADDRESS=your_gmail@gmail.com
-EMAIL_PASSWORD=your_gmail_app_password
-```
-
-> **Gmail App Password:** Go to Google Account → Security → 2-Step Verification → App Passwords → Generate
-
-```powershell
-# Start the server
+# Run server
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-API runs at: `http://127.0.0.1:8000`  
-Swagger docs: `http://127.0.0.1:8000/docs`
+### Environment Variables (`.env`)
 
----
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASS=your_password
+DB_NAME=annachi_kadai
+DB_SSL=false
 
-### 4. Admin Dashboard
+GEMINI_API_KEY=your_gemini_key      # optional
+GROQ_API_KEY=your_groq_key          # for AI chatbot
 
-- Open `admin-dashboard/index.html` with **VS Code Live Server**
-- Or open directly in browser at `http://127.0.0.1:5500/admin-dashboard/index.html`
-- Add products with images, manage orders, view customers
+EMAIL_ADDRESS=your@gmail.com
+EMAIL_PASSWORD=your_app_password
+```
 
----
-
-### 5. Flutter App Setup
+### Flutter Setup
 
 ```powershell
 cd flutter_app
-
-# Install dependencies
 flutter pub get
-```
 
-**For Windows desktop:**
-```powershell
-flutter run -d windows
-```
+# For Android — update IP in api_service.dart
+# static const String _pcIp = 'YOUR_PC_IP';
 
-**For Android:**
-1. Enable USB Debugging on your phone
-2. Connect via USB
-3. Update `lib/api_service.dart` — change `localhost` to your PC's IP:
-```dart
-static const String baseUrl = 'http://192.168.X.X:8000/api';
-```
-4. Run:
-```powershell
 flutter run
 ```
 
-> Phone and PC must be on the **same WiFi network**
+### Database Setup
 
----
+```sql
+CREATE DATABASE annachi_kadai;
+```
 
-## 🚀 Features
-
-### Customer App
-- 📧 Email OTP Login (no password needed)
-- 📝 Register with name, phone, address
-- 🛍️ Browse products with real images
-- 🔍 Search groceries
-- ➕ Zepto-style ADD button with quantity stepper
-- 🛒 Cart with total price
-- 🎤 Voice ordering (Android/iOS)
-- 👤 Profile with logout
-
-### Admin Dashboard
-- 📊 Dashboard with stats (products, orders, stock alerts)
-- 📦 Add products with image upload
-- 🔄 Update stock quantities
-- 🗑️ Delete products
-- 🛍️ Manage order statuses
-- 👥 View registered customers
-
-### AI Features
-- 📈 Demand forecasting per product
-- ⚠️ Low stock alerts with urgency levels
-- 🤖 Smart product recommendations per customer
+Tables are auto-created on first run. To add new status values:
+```sql
+ALTER TABLE orders MODIFY COLUMN status VARCHAR(20) NOT NULL DEFAULT 'pending';
+ALTER TABLE order_items ADD COLUMN price DECIMAL(10,2) DEFAULT 0.00;
+ALTER TABLE customers MODIFY COLUMN membership_card VARCHAR(30) DEFAULT '';
+```
 
 ---
 
 ## 🔌 API Endpoints
 
+### Products
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/products/` | Get all products |
+| GET | `/api/products/` | List all products |
 | POST | `/api/products/add` | Add product |
+| PUT | `/api/products/{id}` | Update product |
 | PUT | `/api/products/{id}/stock` | Update stock |
 | DELETE | `/api/products/{id}` | Delete product |
-| POST | `/api/customers/register` | Register customer |
-| GET | `/api/customers/all` | Get all customers |
-| POST | `/api/auth/send-otp` | Send OTP to email |
-| POST | `/api/auth/verify-otp` | Verify OTP & login |
-| POST | `/api/orders/` | Place order |
-| GET | `/api/orders/` | Get all orders |
+
+### Customers
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/customers/register/send-otp` | Send registration OTP |
+| POST | `/api/customers/register/verify-otp` | Verify & register |
+| POST | `/api/customers/login/send-otp` | Send login OTP |
+| POST | `/api/customers/login/verify-otp` | Verify & login |
+| PUT | `/api/customers/{id}` | Update profile |
+| POST | `/api/customers/membership/purchase` | Purchase membership |
+| GET | `/api/customers/membership/{id}` | Get membership |
+
+### Orders
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/orders/place-with-bill` | Place order + generate PDF bill |
+| GET | `/api/orders/customer/{id}` | Customer order history |
+| GET | `/api/orders/all` | All orders (admin) |
 | PUT | `/api/orders/{id}/status` | Update order status |
-| GET | `/api/ai/low-stock` | Low stock alerts |
-| GET | `/api/ai/demand/{id}` | Demand forecast |
-| GET | `/api/ai/recommendations/{id}` | Product recommendations |
+| GET | `/api/orders/delivery/active` | Active orders for delivery |
+| GET | `/api/orders/delivery/history` | Delivered order history |
+
+### Delivery Partners
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/delivery-partners/register` | Register partner |
+| POST | `/api/delivery-partners/login` | Partner login |
+| PUT | `/api/delivery-partners/{id}/password` | Change password |
+
+### AI
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/ai/chat` | Chat with Groq AI assistant |
 
 ---
 
-## 🔐 Environment Variables
+## 🗺️ Order Status Flow
 
-Create `backend/.env` — **never commit this file**:
-
-```env
-DATABASE_URL=mysql+pymysql://root:PASSWORD@127.0.0.1/annachi_kadai
-EMAIL_ADDRESS=your@gmail.com
-EMAIL_PASSWORD=gmail_app_password
 ```
-
----
-
-## 📱 Running All Services
-
-Open 3 terminals:
-
-**Terminal 1 — Backend:**
-```powershell
-cd backend
-venv\Scripts\activate
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-**Terminal 2 — Admin Dashboard:**
-```
-Open admin-dashboard/index.html with Live Server in VS Code
-```
-
-**Terminal 3 — Flutter App:**
-```powershell
-cd flutter_app
-flutter run -d windows
+pending → confirmed → processing → on_the_way → delivered
+                                              ↘ cancelled
 ```
 
 ---
 
-## 👨‍💻 Built With
+## 📦 Flutter Dependencies
 
-- [FastAPI](https://fastapi.tiangolo.com/)
-- [Flutter](https://flutter.dev/)
-- [MySQL](https://www.mysql.com/)
-- [Bootstrap 5](https://getbootstrap.com/)
-- [scikit-learn](https://scikit-learn.org/)
+```yaml
+dependencies:
+  provider: ^6.1.2
+  shared_preferences: ^2.2.3
+  http: ^1.2.1
+  geolocator: ^11.0.0
+  geocoding: ^3.0.0
+  speech_to_text: ^6.6.2
+  url_launcher: ^6.2.5
+```
+
+---
+
+## 🛡️ Key Business Rules
+
+- **Delivery radius**: 3km from shop (GPS validated)
+- **Delivery charge**: ₹40 below ₹299, FREE above ₹299
+- **Membership free delivery**: Only when card is applied at checkout
+- **Diamond Pass**: ₹10,000 · ₹1,000/month limit · ₹2,000 annual savings
+- **Gold Pass**: ₹26,000 · ₹2,500/month limit · ₹4,000 annual savings
+- **Reward points**: 1 point per ₹1,000 spent, redeemable on orders ≥ ₹1,000
+- **Monthly limit**: Resets on 1st of every month for 12 months
+- **Stock**: Auto-decreases on order placement
+
+---
+
+## 👨‍💻 Author
+
+Built for **Annachi Kadai** — a hyperlocal grocery store in Coimbatore, Tamil Nadu, India.
 
 ---
 
 ## 📄 License
 
-This project is for educational and personal use.
+MIT License — feel free to use and modify.
